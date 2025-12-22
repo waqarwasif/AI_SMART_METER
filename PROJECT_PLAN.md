@@ -57,29 +57,26 @@ Add professional visualization charts (Plotly/Seaborn).
 
 ## Directory Structure
 
-# AI_SMART_METER/
-│
-├── src/ # Logic Implementation Modules
-│ ├── __init__.py # Package initializer
-│ ├── processor.py # Data cleaning logic
-│ ├── analytics.py # Baseload & pattern math
-│ ├── ml_logic.py # AI/Anomaly detection
-│ └── recommender.py # Gemini API & Advice logic
-│
-├── Smart_AI_Meter/ # Main Dashboard Files
-│ ├── app.py # Main Entry point
-│ ├── .streamlit/ # Config & Secrets
-│ └── assets/ # UI Styling (CSS)
-│
-├── data/ # Persistent CSV Storage
-│ ├── raw_usage.csv # Messy input data
-│ └── processed_data.csv # Computable output
-│
-└── helper/ # Developer Documentation
-├── data_cleaning.txt
-├── ai_model_notes.txt
-└── api_integration.txt
-
+```text
+AI_SMART_METER/
+├── src/                    # Logic Implementation Modules
+│   ├── __init__.py         # Package initializer
+│   ├── processor.py        # Data cleaning logic
+│   ├── analytics.py        # Baseload & pattern math
+│   ├── ml_logic.py         # AI/Anomaly detection
+│   └── recommender.py      # Gemini API & Advice logic
+├── Smart_AI_Meter/         # Main Dashboard Files
+│   ├── app.py              # Main Entry point
+│   ├── .streamlit/         # Config & Secrets
+│   └── assets/             # UI Styling (CSS)
+├── data/                   # Persistent CSV Storage
+│   ├── raw_usage.csv       # Messy input data
+│   └── processed_data.csv  # Computable output
+└── helper/                 # Developer Documentation
+    ├── data_cleaning.txt
+    ├── ai_model_notes.txt
+    └── api_integration.txt
+```
 ## Modular Development Rules
 Each module (e.g., processor.py) has its own independent logic.
 

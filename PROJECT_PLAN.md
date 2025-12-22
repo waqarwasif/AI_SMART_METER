@@ -78,24 +78,18 @@ AI_SMART_METER/
     └── api_integration.txt
 ```
 ## Modular Development Rules
-Each module (e.g., processor.py) has its own independent logic.
-
+1) Each module (e.g., processor.py) has its own independent logic.
 Functions must include Docstrings explaining inputs and outputs.
 
-Each team member must document their specific logic inside the helper/ folder.
-
+2) Each team member must document their specific logic inside the helper/ folder.
 Example: helper/ai_notes.txt.
 
-Include: Dependencies used, logic thresholds, and testing notes.
+3) Include: Dependencies used, logic thresholds, and testing notes.
 
-Data Handling:
-
+4) Data Handling:
 Use Pandas for all CSV manipulations.
+Never modify the sample_data.csv directly; always export to a new variable or file.
 
-Never modify the raw_usage.csv directly; always export to a new variable or file.
-
-Testing & Integration:
-
+5) Testing & Integration:
 Test each script individually (e.g., python src/processor.py) before importing into app.py.
-
 Only import the required functions into the main dashboard to keep code clean.

@@ -10,7 +10,7 @@ __pycache__/
 *$py.class
 
 
-.vscode/
+
 
 
 .streamlit/secrets.toml
@@ -22,3 +22,5 @@ dist/
 
 
 *temp.py
+
+*debug.log

@@ -78,4 +78,4 @@ def predict_next_week(model, feature_cols):
     except Exception as e:
         print(f"❌ Error saving CSV: {e}")
     
-    return future_df
+    return future_df 

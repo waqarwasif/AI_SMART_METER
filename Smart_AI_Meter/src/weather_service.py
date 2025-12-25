@@ -50,5 +50,4 @@ def get_karachi_weather_forecast():
     except Exception as e:
         print(f"❌ WEATHER API FAILED: {e}")
         # IMPORTANT: Returning None will trigger the backup. 
-        # If you strictly WANT NO FAKE DATA, the app will stop here.
         return None 

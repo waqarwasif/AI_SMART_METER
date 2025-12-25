@@ -13,8 +13,6 @@ def train_model(df):
     print("🧠 Starting AI Training Sequence...")
 
     # 1. Feature Selection Strategy
-    # We prioritize the "Engineered Features" (Sin/Cos) because they 
-    # help the model understand the "Cycle of Time" better than raw numbers.
     feature_candidates = [
         'temperature_c',   # The Physics (Weather)
         'is_weekend',      # The Logic (Behavior)
@@ -25,7 +23,6 @@ def train_model(df):
     ]
     
     # CRITICAL: We only select features that actually exist in your dataframe.
-    # This prevents the code from crashing if 'month_sin' is missing.
     available_features = [f for f in feature_candidates if f in df.columns]
     
     target_col = 'usage_kwh'
@@ -50,7 +47,9 @@ def train_model(df):
     # Generate Accuracy Report
     predictions = model_test.predict(test_df[available_features])
     mae = mean_absolute_error(test_df[target_col], predictions)
+    
     # MAPE calculation (Mean Absolute Percentage Error)
+    # Added small epsilon (0.001) to avoid division by zero
     mape = np.mean(np.abs((test_df[target_col] - predictions) / (test_df[target_col] + 0.001))) * 100
     accuracy = 100 - mape
     
@@ -63,14 +62,18 @@ def train_model(df):
     print("="*40 + "\n")
 
     # 3. The Production Phase (The "Final Exam")
-    # Now that we know the model logic is good, we train the FINAL model 
-    # on 100% of the data (Rows 0 to End).
-    # This ensures the AI knows about the most recent usage trends.
     print("🚀 Retraining on 100% of Data for Deployment...")
     final_model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
     final_model.fit(df[available_features], df[target_col])
     
     print("✅ AI Model Ready.")
 
-    # Return the model AND the list of features.
-    return final_model, available_features
+    # Package the metrics so the UI can display them
+    metrics = {
+        "accuracy": accuracy,
+        "mape": mape,
+        "mae": mae
+    }
+
+    # Return 3 items: Model, Features, AND Metrics
+    return final_model, available_features, metrics

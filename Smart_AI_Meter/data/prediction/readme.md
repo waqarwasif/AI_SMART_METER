@@ -1,1 +1,0 @@
-This is the folder where the data from the model will be stored

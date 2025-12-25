@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import os  # Added to handle folder paths safely
+import os
 from src.weather_service import get_karachi_weather_forecast
 
 def generate_future_features(model_features):
@@ -63,19 +63,8 @@ def predict_next_week(model, feature_cols):
     # 3. Predict
     future_df['predicted_usage_kwh'] = model.predict(X_future)
     
-    # 4. PREPARE EXPORT DATA
-    export_df = future_df[['hour', 'temperature_c', 'predicted_usage_kwh']].copy()
+    # --- DELETED SAVING LOGIC HERE ---
+    # The file saving is now handled exclusively by app.py 
+    # to prevent duplicate files and ensure correct column filtering.
     
-    # 5. SAVE TO CSV
-    output_path = 'data/prediction/forecast_results.csv'
-    
-    # Ensure the folder exists (just in case)
-    os.makedirs('data/prediction', exist_ok=True)
-    
-    try:
-        export_df.to_csv(output_path, index=False)
-        print(f"✅ Success! Forecast saved to: {output_path}")
-    except Exception as e:
-        print(f"❌ Error saving CSV: {e}")
-    
-    return future_df 
+    return future_df

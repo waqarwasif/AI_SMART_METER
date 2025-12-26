@@ -10,3 +10,4 @@ pyyaml
 python-dateutil
 google-generativeai
 huggingface-hub
+fpdf

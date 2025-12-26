@@ -8,158 +8,219 @@ import os
 # ---------------------------------------------
 os.makedirs("graphs", exist_ok=True)
 
-plt.style.use("default")
 sns.set_theme(style="whitegrid", context="paper")
+plt.rcParams["figure.autolayout"] = False
 
-# TRUE FINAL SIZE CONTROL
-FIG_SIZE_STANDARD = (5, 3)     # SMALLER
-FIG_SIZE_WIDE = (6, 3)
-FIG_SIZE_HEATMAP = (6, 4)
-DPI_SETTING = 120              # LOWER DPI = smaller PNG
+FIG_STD = (5, 3)
+FIG_WIDE = (6, 3)
+FIG_HEAT = (6, 4)
+DPI = 120
 
 PEAK_START = 7
 PEAK_END = 19
 
 
-def save_plot(filename):
+def save_plot(name):
     plt.tight_layout()
-    plt.savefig(
-        f"graphs/{filename}",
-        dpi=DPI_SETTING,
-        bbox_inches="tight"
-    )
+    plt.savefig(f"graphs/{name}", dpi=DPI, bbox_inches="tight")
     plt.close()
 
 
 # ---------------------------------------------
-# CLEAN DATA (HISTORICAL)
+# HISTORICAL DATA
 # ---------------------------------------------
 def plot_clean_daily_profile(df):
-    plt.figure(figsize=FIG_SIZE_STANDARD)
-    sns.lineplot(data=df, x="hour", y="usage_kwh", linewidth=2)
-    plt.title("Daily Load Profile")
-    plt.xlabel("Hour")
-    plt.ylabel("Usage (kWh)")
+    avg = df.groupby("hour")["usage_kwh"].mean()
+    plt.figure(figsize=FIG_STD)
+    plt.plot(avg.index, avg.values, color="#1f77b4", linewidth=2)
+    plt.title("Average Daily Load Profile")
+    plt.xlabel("Hour of Day")
+    plt.ylabel("Avg Usage (kWh)")
     plt.xticks(range(0, 24, 3))
     save_plot("1_clean_daily_profile.png")
 
 
 def plot_clean_peak_distribution(df):
-    plt.figure(figsize=(4, 4))
     df = df.copy()
     df["period"] = df["hour"].apply(
-        lambda x: "Peak" if PEAK_START <= x < PEAK_END else "Off-Peak"
+        lambda h: "Peak" if PEAK_START <= h < PEAK_END else "Off-Peak"
     )
     usage = df.groupby("period")["usage_kwh"].sum()
 
+    plt.figure(figsize=(4, 4))
     plt.pie(
         usage,
         labels=usage.index,
         autopct="%1.1f%%",
         startangle=90,
+        colors=["#ff7f0e", "#1f77b4"],
         wedgeprops=dict(width=0.35)
     )
-    plt.title("Peak vs Off-Peak Usage")
+    plt.title("Energy Usage Distribution")
     save_plot("2_clean_peak_distribution.png")
 
 
 def plot_clean_full_pattern(df):
-    plt.figure(figsize=FIG_SIZE_WIDE)
-    plt.plot(df.index, df["usage_kwh"], linewidth=1)
-    plt.title("Full Usage Pattern")
-    plt.xlabel("Time")
-    plt.ylabel("kWh")
+    plt.figure(figsize=FIG_WIDE)
+    plt.plot(range(len(df)), df["usage_kwh"], linewidth=1, color="#2ca02c")
+    plt.title("Full Usage Pattern (Relative Time)")
+    plt.xlabel("Time Index")
+    plt.ylabel("Usage (kWh)")
     save_plot("3_clean_full_pattern.png")
 
 
 def plot_clean_temp_correlation(df):
-    plt.figure(figsize=FIG_SIZE_STANDARD)
     avg = df.groupby("hour")[["usage_kwh", "temperature_c"]].mean()
 
-    plt.plot(avg.index, avg["usage_kwh"], label="Usage")
-    plt.plot(avg.index, avg["temperature_c"], linestyle="--", label="Temp")
+    fig, ax1 = plt.subplots(figsize=FIG_STD)
+    ax1.plot(avg.index, avg["usage_kwh"], color="#1f77b4", linewidth=2)
+    ax1.set_ylabel("Avg Usage (kWh)", color="#1f77b4")
+    ax1.set_xlabel("Hour of Day")
+    ax1.tick_params(axis="y", labelcolor="#1f77b4")
 
-    plt.legend()
-    plt.title("Temp vs Usage")
+    ax2 = ax1.twinx()
+    ax2.plot(avg.index, avg["temperature_c"], "--", color="#d62728", linewidth=2)
+    ax2.set_ylabel("Avg Temperature (°C)", color="#d62728")
+    ax2.tick_params(axis="y", labelcolor="#d62728")
+
+    plt.title("Temperature vs Energy Usage")
+    plt.xticks(range(0, 24, 3))
     save_plot("4_clean_temp_correlation.png")
 
 
 def plot_clean_heatmap(df):
-    plt.figure(figsize=FIG_SIZE_HEATMAP)
-    pivot = df.pivot_table(
-        index="day_of_month",
-        columns="hour",
-        values="usage_kwh",
-        aggfunc="mean"
+    pivot = (
+        df.pivot_table(
+            index="day_of_month",
+            columns="hour",
+            values="usage_kwh",
+            aggfunc="mean"
+        )
+        .sort_index()
+        .fillna(0)
     )
-    sns.heatmap(pivot, cmap="magma")
-    plt.title("Usage Heatmap")
+
+    plt.figure(figsize=FIG_HEAT)
+    sns.heatmap(
+        pivot,
+        cmap="magma",
+        vmin=pivot.min().min(),
+        vmax=pivot.max().max(),
+        cbar_kws={"label": "kWh"}
+    )
+    plt.title("Usage Intensity Heatmap")
+    plt.xlabel("Hour")
+    plt.ylabel("Day of Month")
     save_plot("5_clean_heatmap.png")
 
 
 # ---------------------------------------------
-# PREDICTED DATA (AI OUTPUT)
+# PREDICTED DATA
 # ---------------------------------------------
 def plot_pred_daily_profile(df):
-    plt.figure(figsize=FIG_SIZE_STANDARD)
-    sns.lineplot(data=df, x="hour", y="predicted_usage_kwh", linewidth=2)
+    avg = df.groupby("hour")["predicted_usage_kwh"].mean()
+    plt.figure(figsize=FIG_STD)
+    plt.plot(avg.index, avg.values, color="#ff7f0e", linewidth=2)
     plt.title("Predicted Daily Profile")
+    plt.xlabel("Hour")
+    plt.ylabel("Predicted Usage (kWh)")
+    plt.xticks(range(0, 24, 3))
     save_plot("6_pred_daily_profile.png")
 
 
 def plot_pred_peak_distribution(df):
-    plt.figure(figsize=(4, 4))
     df = df.copy()
     df["period"] = df["hour"].apply(
-        lambda x: "Peak" if PEAK_START <= x < PEAK_END else "Off-Peak"
+        lambda h: "Peak" if PEAK_START <= h < PEAK_END else "Off-Peak"
     )
     usage = df.groupby("period")["predicted_usage_kwh"].sum()
 
+    plt.figure(figsize=(4, 4))
     plt.pie(
         usage,
         labels=usage.index,
         autopct="%1.1f%%",
         startangle=90,
+        colors=["#ffbb78", "#ff7f0e"],
         wedgeprops=dict(width=0.35)
     )
-    plt.title("Predicted Distribution")
+    plt.title("Predicted Energy Distribution")
     save_plot("7_pred_peak_distribution.png")
 
 
 def plot_pred_full_forecast(df):
-    plt.figure(figsize=FIG_SIZE_WIDE)
-    plt.plot(df["timestamp"], df["predicted_usage_kwh"], linewidth=1.5)
-    plt.xticks(rotation=45)
-    plt.title("7-Day Forecast")
+    plt.figure(figsize=FIG_WIDE)
+    plt.plot(range(len(df)), df["predicted_usage_kwh"], linewidth=1.5, color="#9467bd")
+    plt.title("7-Day Forecast (Relative Time)")
+    plt.xlabel("Forecast Hour Index")
+    plt.ylabel("Predicted Usage (kWh)")
     save_plot("8_pred_full_forecast.png")
 
 
 def plot_pred_temp_forecast(df):
-    plt.figure(figsize=FIG_SIZE_WIDE)
-    plt.plot(df["timestamp"], df["predicted_usage_kwh"], label="Usage")
-    plt.plot(df["timestamp"], df["temperature_c"], linestyle="--", label="Temp")
-    plt.legend()
-    plt.xticks(rotation=45)
-    plt.title("Forecast: Usage vs Temp")
+    fig, ax1 = plt.subplots(figsize=FIG_WIDE)
+
+    ax1.plot(
+        range(len(df)),
+        df["predicted_usage_kwh"],
+        color="#ff7f0e",
+        linewidth=2
+    )
+    ax1.set_ylabel("Predicted Usage (kWh)", color="#ff7f0e")
+    ax1.tick_params(axis="y", labelcolor="#ff7f0e")
+
+    ax2 = ax1.twinx()
+    ax2.plot(
+        range(len(df)),
+        df["temperature_c"],
+        "--",
+        color="#d62728",
+        linewidth=2
+    )
+    ax2.set_ylabel("Forecast Temperature (°C)", color="#d62728")
+    ax2.tick_params(axis="y", labelcolor="#d62728")
+
+    ax1.set_xlabel("Forecast Hour Index")
+    plt.title("Forecast: Usage vs Temperature")
     save_plot("9_pred_temp_forecast.png")
 
 
 def plot_pred_heatmap(df):
     df = df.copy()
-    if "day_index" not in df.columns:
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
-        start = df["timestamp"].dt.date.iloc[0]
-        df["day_index"] = df["timestamp"].apply(
-            lambda x: (x.date() - start).days + 1
-        )
 
-    plt.figure(figsize=FIG_SIZE_HEATMAP)
-    pivot = df.pivot_table(
-        index="day_index",
-        columns="hour",
-        values="predicted_usage_kwh",
-        aggfunc="mean"
+    # --- STRICT DATETIME HANDLING ---
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["forecast_day"] = (
+        df["timestamp"].dt.date
+        - df["timestamp"].dt.date.min()
+    ).apply(lambda x: x.days + 1)
+
+    # --- PIVOT TABLE ---
+    pivot = (
+        df.pivot_table(
+            index="forecast_day",
+            columns="hour",
+            values="predicted_usage_kwh",
+            aggfunc="mean"
+        )
+        .sort_index()
     )
-    sns.heatmap(pivot, cmap="inferno")
-    plt.title("Predicted Heatmap")
+
+    # --- ROBUST COLOR SCALING ---
+    vmin = pivot.stack().quantile(0.05)
+    vmax = pivot.stack().quantile(0.95)
+
+    plt.figure(figsize=(6, 4))
+    sns.heatmap(
+        pivot,
+        cmap="inferno",
+        vmin=vmin,
+        vmax=vmax,
+        linewidths=0.2,
+        cbar_kws={"label": "Predicted Usage (kWh)"}
+    )
+
+    plt.title("Predicted Usage Heatmap (7-Day Forecast)")
+    plt.xlabel("Hour of Day")
+    plt.ylabel("Forecast Day")
     save_plot("10_pred_heatmap.png")

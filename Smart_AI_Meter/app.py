@@ -7,6 +7,8 @@ import time
 from src.processor import clean_data
 from src.predictor import train_model
 from src.forecaster import predict_next_week
+# Added Recommender Import
+from src.recommender import get_ai_energy_plan
 
 # Import the visualization module
 try:
@@ -54,13 +56,13 @@ st.markdown("""
 
 /* Sub-box styling for accuracy metrics */
 .sub-metric-box {
-    padding: 8px 15px; /* Comfortable padding */
+    padding: 8px 15px;
     border-radius: 8px;
     text-align: center;
     font-size: 14px;
     font-weight: 600;
     margin-top: 5px;
-    margin-bottom: 20px; /* CRITICAL FIX: Prevents collision with box below */
+    margin-bottom: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -77,6 +79,10 @@ uploaded_file = st.file_uploader("📂 Upload electricity usage CSV", type=["csv
 # Initialize session state
 if 'analysis_done' not in st.session_state:
     st.session_state['analysis_done'] = False
+if 'household_profile' not in st.session_state:
+    st.session_state['household_profile'] = {}
+if 'df_clean' not in st.session_state:
+    st.session_state['df_clean'] = None
 
 if uploaded_file:
     # --- STEP 1: SAVE RAW FILE ---
@@ -90,9 +96,34 @@ if uploaded_file:
     
     st.success(f"✅ Raw file received: {uploaded_file.name}")
 
+    # --- NEW SECTION: HOUSEHOLD PROFILE ---
+    st.markdown("### 🏠 Household Context")
+    st.info("Please tell us about your home so the AI can generate a smarter plan.")
+    
+    col_profile_1, col_profile_2 = st.columns(2)
+    
+    with col_profile_1:
+        num_people = st.number_input("👨‍👩‍👧‍👦 Number of Residents", min_value=1, max_value=20, value=4)
+    
+    with col_profile_2:
+        # Multiselect is cleaner than many checkboxes
+        heavy_devices = st.multiselect(
+            "🔌 Select High-Load Devices you own:",
+            ["Air Conditioner (AC)", "Electric Heater", "Water Pump (Motor)", "Iron", "Microwave", "Washing Machine", "Electric Geyser", "EV Charger"],
+            default=["Iron", "Water Pump (Motor)"]
+        )
+
+    st.write("") # Spacer
+
     # --- STEP 2: START ANALYSIS BUTTON ---
     if st.button("🚀 Analyze & Predict Future Usage"):
         
+        # SAVE CONTEXT TO SESSION STATE
+        st.session_state['household_profile'] = {
+            'residents': num_people,
+            'devices': heavy_devices
+        }
+
         # A. CLEANING
         with st.spinner("⚙️ Cleaning data..."):
             df_raw = pd.read_csv(raw_file_path)
@@ -128,8 +159,6 @@ if uploaded_file:
         # --- SUB-INFORMATION SECTION (Success + Metrics) ---
         st.success("✅ Prediction Complete!")
         
-        # Create smaller columns strictly for the sub-info
-        # We use a spacer column at the end to keep boxes small and to the left
         m_col1, m_col2, m_col3 = st.columns([1.5, 1.5, 4]) 
         
         with m_col1:
@@ -146,7 +175,6 @@ if uploaded_file:
             </div>
             """, unsafe_allow_html=True)
             
-        # Add a tiny vertical spacer to ensure next spinner doesn't jump up
         st.write("") 
         # ---------------------------------------------------
 
@@ -236,8 +264,74 @@ if st.session_state['analysis_done']:
     with st.expander("📄 View Detailed Hourly Forecast Data"):
         st.dataframe(future_df)
 
+    # ---------------------------------------------
+    # 6. AI STRATEGIC PLANNER (Integrates Household Context)
+    # ---------------------------------------------
+st.markdown("---")
+st.subheader("🤖 AI Strategic Energy Consultant")
+st.caption("Generate a personalized 7-day action plan based on your predicted load and household context.")
+
+# SECURE API KEY INPUT
+with st.expander("🔑 API Key Setup (Click to expand)", expanded=False):
+    st.info("""
+    **How to get your FREE Hugging Face API Key:**
+    1. Go to https://huggingface.co/settings/tokens
+    2. Click "New token"
+    3. Give it a name (e.g., "Energy Advisor")
+    4. Select "Read" permissions
+    5. Copy and paste the token below
+    """)
+    
+    hf_api_key = st.text_input(
+        "Enter your Hugging Face API Key:",
+        type="password",
+        placeholder="hf_xxxxxxxxxxxxxxxxxxxxx"
+    )
+
+if hf_api_key and len(hf_api_key) > 20:
+    if st.button("💡 Generate Smart Plan"):
+        with st.spinner("🤖 Connecting to AI models... This may take 10-20 seconds..."):
+            
+            # Retrieve data
+            df_clean = st.session_state.get('df_clean')
+            profile = st.session_state.get('household_profile', {})
+            
+            if df_clean is None:
+                st.error("❌ Please run the analysis first before generating AI plan.")
+            else:
+                try:
+                    # Call AI function
+                    plan = get_ai_energy_plan(
+                        df_clean, 
+                        future_df, 
+                        hf_api_key, 
+                        household_profile=profile
+                    )
+                    
+                    # Check if error message
+                    if plan.startswith("❌"):
+                        st.warning(plan)
+                    else:
+                        st.success("✅ Strategic Plan Generated")
+                        
+                        # Display with nice formatting
+                        st.markdown(f"""
+                        <div style="background-color:#1b263b; color:#e0e1dd; padding:25px; border-radius:10px; border-left: 5px solid #00f5d4; font-family: sans-serif; line-height: 1.8; white-space: pre-wrap;">
+{plan}
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                except Exception as e:
+                    st.error(f"❌ Error generating plan: {str(e)}")
+                    st.code(f"Error details: {type(e).__name__}")
+
+elif hf_api_key and len(hf_api_key) <= 20:
+    st.warning("⚠️ API key seems too short. Please enter a valid Hugging Face token.")
+else:
+    st.info("👆 Click above to expand and enter your API key to generate AI recommendations")
+
 # ---------------------------------------------
 # Footer
 # ---------------------------------------------
 st.markdown("---")
-st.caption("⚡ Smart AI Meter | Smart Energy Project")
+st.caption("⚡ Smart AI Meter | Final Year Project")

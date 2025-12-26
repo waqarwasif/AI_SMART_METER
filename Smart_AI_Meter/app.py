@@ -43,7 +43,7 @@ def create_pdf(report_text):
         '\u201d': '"',      # Smart quote -> "
         '⚡': '', '🏠': '', '✅': '[OK]', '⚠️': '[WARN]', '🚨': '[ALERT]', 
         '❄️': '', '💧': '', '👕': '', '💡': '', '🤖': '', '📊': '', 
-        '📉': '', '💰': '', '🗓️': ''
+        '📉': '', '💰': '', '🗓️': '', '📑': ''
     }
     
     safe_text = report_text
@@ -157,6 +157,18 @@ if uploaded_file:
     
     with col_profile_1:
         num_people = st.number_input("👨‍👩‍👧‍👦 Number of Residents", min_value=1, max_value=20, value=4)
+        
+        # --- NEW: SEASON DROPDOWN ---
+        season_input = st.selectbox(
+            "🌤️ Select Season Context:",
+            [
+                "Winter (Heating/Geyser Season)", 
+                "Summer (Peak AC Season)", 
+                "Spring (Moderate)", 
+                "Autumn (Transition)"
+            ],
+            index=1 # Default to Summer
+        )
     
     with col_profile_2:
         # Multiselect is cleaner than many checkboxes
@@ -171,10 +183,11 @@ if uploaded_file:
     # --- STEP 2: START ANALYSIS BUTTON ---
     if st.button("🚀 Analyze & Predict Future Usage"):
         
-        # SAVE CONTEXT TO SESSION STATE
+        # SAVE CONTEXT TO SESSION STATE (Including User Selected Season)
         st.session_state['household_profile'] = {
             'residents': num_people,
-            'devices': heavy_devices
+            'devices': heavy_devices,
+            'season': season_input  # <--- Saving Season
         }
 
         # A. CLEANING
@@ -411,4 +424,4 @@ else:
 # Footer
 # ---------------------------------------------
 st.markdown("---")
-st.caption("⚡ Smart AI Meter | Final Year Project")
+st.caption("⚡ Smart AI Meter | Energy Usage Advisor Project")

@@ -3,24 +3,13 @@ from huggingface_hub import InferenceClient
 import time
 import datetime
 
-def get_season(month):
-    """Returns the season in Karachi based on the month."""
-    if month in [11, 12, 1, 2]:
-        return "Winter (Heating/Geyser Season)"
-    elif month in [3, 4]:
-        return "Spring (Moderate/Transition)"
-    elif month in [5, 6, 7, 8, 9]:
-        return "Summer (Peak AC Season)"
-    else:
-        return "Autumn (Transition)"
-
 def get_ai_energy_plan(past_df, future_df, api_key, household_profile={}):
     """
     Generates a Context-Aware Energy Plan.
-    - Knows the specific Month/Season in Karachi.
+    - Uses the SEASON selected by the user in the App (Frontend).
     - Strictly restricts advice to USER-SELECTED devices only.
     """
-    print("🤖 AI CONSULTANT: Analyzing Season & Devices...")
+    print("🤖 AI CONSULTANT: Analyzing User Selected Season & Devices...")
 
     try:
         # --- STEP 1: DATA PREP ---
@@ -28,26 +17,19 @@ def get_ai_energy_plan(past_df, future_df, api_key, household_profile={}):
         if 'timestamp' not in df_history.columns:
             df_history = df_history.reset_index()
             # Try finding the timestamp column
-            found_col = False
             for col in ['index', 'Datetime', df_history.columns[0]]:
                 if col in df_history.columns:
                     df_history = df_history.rename(columns={col: 'timestamp'})
-                    found_col = True
                     break
         
         df_history['timestamp'] = pd.to_datetime(df_history['timestamp'], errors='coerce')
 
-        # --- STEP 2: SEASON & DATE CONTEXT ---
-        # Get the first date from the forecast to determine current time
+        # --- STEP 2: CALCULATIONS ---
+        # We process the forecast data to get usage numbers, but we ignore the specific month
+        # for season detection, relying on user input instead.
         future_df_copy = future_df.copy()
         future_df_copy['date'] = pd.to_datetime(future_df_copy['timestamp']).dt.date
         
-        current_date = future_df_copy['date'].min()
-        current_month = current_date.month
-        current_season = get_season(current_month)
-        formatted_date = current_date.strftime("%d %B %Y")
-
-        # --- STEP 3: CALCULATIONS ---
         daily_forecast = future_df_copy.groupby('date').agg({
             'predicted_usage_kwh': 'sum',
             'temperature_c': 'mean'
@@ -75,9 +57,13 @@ def get_ai_energy_plan(past_df, future_df, api_key, household_profile={}):
             units_to_cut = int(projected_total - 200)
             slab_warning = f"⚠️ WARNING: Approaching 200 Units (Rs. 22/unit tier)"
 
-        # --- STEP 4: STRICT DEVICE CONTEXT ---
+        # --- STEP 3: USER INPUT CONTEXT ---
         residents = household_profile.get('residents', 4)
         selected_devices = household_profile.get('devices', [])
+        
+        # RETRIEVE SEASON FROM FRONTEND SELECTION
+        # Default to Summer if not found, as Karachi is mostly hot
+        current_season = household_profile.get('season', 'Summer (Peak AC Season)') 
         
         if not selected_devices:
             device_str = "Standard Lights & Fans only (No heavy appliances selected)"
@@ -93,29 +79,29 @@ def get_ai_energy_plan(past_df, future_df, api_key, household_profile={}):
             forecast_lines.append(f"- {d_name}: {row['predicted_usage_kwh']:.1f} kWh | {row['temperature_c']:.1f}°C")
         forecast_block = "\n".join(forecast_lines)
 
-        # --- STEP 5: PROMPT ENGINEERING (Season & Device Strictness) ---
+        # --- STEP 4: PROMPT ENGINEERING (User Season & Device Strictness) ---
+        # I removed the specific "Date" field to prevent logic conflict 
+        # (e.g. if file has Dec date but user selects Summer)
         prompt = f"""You are a Senior Energy Auditor for a household in Karachi, Pakistan but Don't mention that in the report.
         
 **CURRENT CONTEXT:**
-- **Date:** {formatted_date}
-- **Season:** {current_season} use the weather for generating advice accordingly.
+- **Season:** {current_season} (Base your advice strictly on this season).
 - **Projected Usage:** {projected_total:.1f} kWh over next 7 days.
-- **Residents:** {residents} these are the number of people in the house affecting usage, consider this in your advice.
-- **Billing Status:** {slab_warning} (Target Cut: {units_to_cut} .. mention this in the report)
+- **Residents:** {residents} (Number of people affecting usage).
+- **Billing Status:** {slab_warning} (Target Cut: {units_to_cut} .. mention this in the report).
 
 **ACTIVE DEVICE LIST (STRICT):**
 {device_str} these are the ONLY high usage devices you can give advice on.
 
 **7-DAY FORECAST:**
-{forecast_block} these are the predicted daily usages and temperatures for the next week. I want you to generate a day-by-day plan based on this.
+{forecast_block} these are the predicted daily usages and temperatures for the next week.
 
 **INSTRUCTIONS:**
 Write a "Weekly Energy Strategy Report" with these specific rules:
-1. **Context Awareness:** Since it is {current_season}, tailor your advice accordingly (e.g., if Winter, focus on Geysers/Heaters; if Summer, focus on AC/Fans).
+1. **Context Awareness:** The user has explicitly stated it is **{current_season}**. Tailor advice to this weather (e.g., if Summer, focus on cooling; if Winter, focus on heating/geysers).
 2. **Device Strictness:** {device_constraint}
 3. **Reduction Strategy:** specific plan to save {units_to_cut} units using ONLY the active devices.
 4. **Clarity & Actionability:** Use simple language, bullet points, and clear daily tasks.
-
 
 **REPORT SECTIONS:**
 1. Executive Strategy: How to hit the reduction target this week.
@@ -123,7 +109,7 @@ Write a "Weekly Energy Strategy Report" with these specific rules:
 3. Seasonal Recommendations: Specific tips for {current_season} in Karachi.
 """
 
-        # --- STEP 6: API CALL ---
+        # --- STEP 5: API CALL ---
         free_chat_models = [
             "meta-llama/Llama-3.2-3B-Instruct",
             "HuggingFaceH4/zephyr-7b-beta",
@@ -138,7 +124,7 @@ Write a "Weekly Energy Strategy Report" with these specific rules:
                 response = client.chat_completion(
                     model=model_name,
                     messages=[
-                        {"role": "system", "content": "You are a precise Energy Consultant. Follow device constraints strictly."},
+                        {"role": "system", "content": "You are a precise Energy Consultant. Follow device and season constraints strictly."},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=1200,

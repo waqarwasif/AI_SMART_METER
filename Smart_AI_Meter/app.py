@@ -321,7 +321,12 @@ if st.session_state['analysis_done']:
     if graph_filename:
         file_path = f"graphs/{graph_filename}"
         if os.path.exists(file_path):
-            st.image(file_path, caption=selected_graph_name, use_container_width=True)
+            st.image(
+                        file_path,
+                        caption=selected_graph_name,
+                        width=900   # 👈 TRUE VISUAL SIZE CONTROL
+                    )
+
         else:
             st.warning("Graph file not found. Please re-run the analysis.")
     else:

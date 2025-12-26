@@ -2,12 +2,12 @@ import streamlit as st
 import pandas as pd
 import os
 import time
+from fpdf import FPDF
 
 # --- IMPORT YOUR MODULES ---
 from src.processor import clean_data
 from src.predictor import train_model
 from src.forecaster import predict_next_week
-# Added Recommender Import
 from src.recommender import get_ai_energy_plan
 
 # Import the visualization module
@@ -15,6 +15,57 @@ try:
     from analysis import visualization as viz
 except ImportError:
     st.error("⚠️ Could not import 'visualization'. Please ensure 'visualization.py' is in the 'analysis' folder.")
+
+# ---------------------------------------------
+# 0. PDF Generator Function (FIXED FOR UNICODE)
+# ---------------------------------------------
+def create_pdf(report_text):
+    class PDF(FPDF):
+        def header(self):
+            self.set_font('Arial', 'B', 15)
+            self.cell(0, 10, 'AI Smart Energy Report', 0, 1, 'C')
+            self.ln(5)
+
+        def footer(self):
+            self.set_y(-15)
+            self.set_font('Arial', 'I', 8)
+            self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+
+    # 1. Sanitize Text (Remove Emojis & Fix Bullets)
+    # FPDF only supports Latin-1, so we replace fancy chars with simple ones
+    replacements = {
+        '\u2022': '-',      # Bullet point -> Dash
+        '\u2013': '-',      # En dash -> Dash
+        '\u2014': '-',      # Em dash -> Dash
+        '\u2018': "'",      # Smart quote -> '
+        '\u2019': "'",      # Smart quote -> '
+        '\u201c': '"',      # Smart quote -> "
+        '\u201d': '"',      # Smart quote -> "
+        '⚡': '', '🏠': '', '✅': '[OK]', '⚠️': '[WARN]', '🚨': '[ALERT]', 
+        '❄️': '', '💧': '', '👕': '', '💡': '', '🤖': '', '📊': '', 
+        '📉': '', '💰': '', '🗓️': ''
+    }
+    
+    safe_text = report_text
+    for char, replacement in replacements.items():
+        safe_text = safe_text.replace(char, replacement)
+    
+    # Final cleanup: Remove any other non-latin characters
+    safe_text = safe_text.encode('latin-1', 'replace').decode('latin-1')
+
+    # 2. Generate PDF
+    pdf = PDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    
+    # Add content
+    # We strip markdown stars/hashes for cleaner plain text in PDF
+    clean_text = safe_text.replace('**', '').replace('###', '').replace('####', '')
+    
+    pdf.multi_cell(0, 7, clean_text)
+    
+    # Return binary
+    return pdf.output(dest='S').encode('latin-1')
 
 # ---------------------------------------------
 # 1. Page Configuration
@@ -83,6 +134,8 @@ if 'household_profile' not in st.session_state:
     st.session_state['household_profile'] = {}
 if 'df_clean' not in st.session_state:
     st.session_state['df_clean'] = None
+if 'ai_plan' not in st.session_state:
+    st.session_state['ai_plan'] = None
 
 if uploaded_file:
     # --- STEP 1: SAVE RAW FILE ---
@@ -270,13 +323,15 @@ if st.session_state['analysis_done']:
 st.markdown("---")
 st.subheader("🤖 AI Strategic Energy Consultant")
 
-# Automatically get the key from secrets
+# Automatically get the key from secrets or let user enter it
 try:
     hf_api_key = st.secrets["HF_API_KEY"]
-    st.success("✅ API Key loaded automatically from secrets.")
 except Exception:
-    hf_api_key = None
-    st.warning("⚠️ API Key not found in secrets. Please add it to .streamlit/secrets.toml")
+    hf_api_key = ""
+
+# If no secret, show input box
+if not hf_api_key:
+    hf_api_key = st.text_input("Enter Hugging Face API Key", type="password")
 
 if hf_api_key and len(hf_api_key) > 20:
     if st.button("💡 Generate Smart Plan"):
@@ -293,32 +348,64 @@ if hf_api_key and len(hf_api_key) > 20:
                     # Call AI function
                     plan = get_ai_energy_plan(
                         df_clean, 
-                        future_df, 
+                        st.session_state['future_df'], 
                         hf_api_key, 
                         household_profile=profile
                     )
+                    
+                    st.session_state['ai_plan'] = plan
                     
                     # Check if error message
                     if plan.startswith("❌"):
                         st.warning(plan)
                     else:
                         st.success("✅ Strategic Plan Generated")
-                        
-                        # Display with nice formatting
-                        st.markdown(f"""
-                        <div style="background-color:#1b263b; color:#e0e1dd; padding:25px; border-radius:10px; border-left: 5px solid #00f5d4; font-family: sans-serif; line-height: 1.8; white-space: pre-wrap;">
-{plan}
-                        </div>
-                        """, unsafe_allow_html=True)
                 
                 except Exception as e:
                     st.error(f"❌ Error generating plan: {str(e)}")
-                    st.code(f"Error details: {type(e).__name__}")
+
+    # DISPLAY THE REPORT IF IT EXISTS
+    if st.session_state['ai_plan'] and not st.session_state['ai_plan'].startswith("❌"):
+        plan = st.session_state['ai_plan']
+        
+        # --- NEW: PROFESSIONAL REPORT UI ---
+        st.markdown(f"""
+        <div style="
+            background-color: #1b263b; 
+            color: #e0e1dd; 
+            padding: 30px; 
+            border-radius: 12px; 
+            border: 1px solid #00f5d4; 
+            box-shadow: 0 4px 15px rgba(0, 245, 212, 0.2);
+            font-family: 'Arial', sans-serif; 
+            line-height: 1.8; 
+            white-space: pre-wrap;
+            margin-top: 20px;">
+            <h3 style="color:#00f5d4; margin-top:0; text-align:center; border-bottom: 1px solid #00f5d4; padding-bottom: 10px;">
+                📑 Weekly Energy Strategy Report
+            </h3>
+            {plan}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # --- NEW: DOWNLOAD BUTTON ---
+        col_dl_1, col_dl_2, col_dl_3 = st.columns([1,2,1])
+        with col_dl_2:
+            st.write("") # Spacer
+            # Create PDF
+            pdf_bytes = create_pdf(plan)
+            st.download_button(
+                label="📥 Download Report as PDF",
+                data=pdf_bytes,
+                file_name="AI_Energy_Report.pdf",
+                mime="application/pdf",
+                key='download-pdf'
+            )
 
 elif hf_api_key and len(hf_api_key) <= 20:
     st.warning("⚠️ API key seems too short. Please enter a valid Hugging Face token.")
 else:
-    st.info("👆 Click above to expand and enter your API key to generate AI recommendations")
+    st.info("👆 Enter your API key above to generate AI recommendations")
 
 # ---------------------------------------------
 # Footer

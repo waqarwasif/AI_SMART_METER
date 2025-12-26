@@ -9,3 +9,4 @@ openpyxl
 pyyaml
 python-dateutil
 google-generativeai
+huggingface-hub

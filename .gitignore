@@ -24,3 +24,6 @@ dist/
 *temp.py
 
 *debug.log
+*.csv
+*.png
+/Smart_AI_Meter/.streamlit/secrets.toml

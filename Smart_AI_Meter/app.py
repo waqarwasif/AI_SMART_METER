@@ -269,24 +269,14 @@ if st.session_state['analysis_done']:
     # ---------------------------------------------
 st.markdown("---")
 st.subheader("🤖 AI Strategic Energy Consultant")
-st.caption("Generate a personalized 7-day action plan based on your predicted load and household context.")
 
-# SECURE API KEY INPUT
-with st.expander("🔑 API Key Setup (Click to expand)", expanded=False):
-    st.info("""
-    **How to get your FREE Hugging Face API Key:**
-    1. Go to https://huggingface.co/settings/tokens
-    2. Click "New token"
-    3. Give it a name (e.g., "Energy Advisor")
-    4. Select "Read" permissions
-    5. Copy and paste the token below
-    """)
-    
-    hf_api_key = st.text_input(
-        "Enter your Hugging Face API Key:",
-        type="password",
-        placeholder="hf_xxxxxxxxxxxxxxxxxxxxx"
-    )
+# Automatically get the key from secrets
+try:
+    hf_api_key = st.secrets["HF_API_KEY"]
+    st.success("✅ API Key loaded automatically from secrets.")
+except Exception:
+    hf_api_key = None
+    st.warning("⚠️ API Key not found in secrets. Please add it to .streamlit/secrets.toml")
 
 if hf_api_key and len(hf_api_key) > 20:
     if st.button("💡 Generate Smart Plan"):

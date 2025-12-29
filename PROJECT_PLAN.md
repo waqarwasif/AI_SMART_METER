@@ -20,11 +20,7 @@ It uses automated data cleaning and Scikit-Learn (Isolation Forest) to detect hi
 ### Phase 2
 ### Objective: Data Ingestion & "The Cleaner" Functions to Implement:
 
-load_data(): Read raw CSV files.
-
-clean_data(): Handle missing NaN values and remove data-type errors.
-
-standardize_data(): Ensure hourly timestamps are aligned for computation.
+clean_data(): Read raw CSV files and handle missing NaN values and remove data-type errors.
 
 Storage: data/raw_usage.csv
 
@@ -59,24 +55,23 @@ Add professional visualization charts (Plotly/Seaborn).
 
 ```text
 AI_SMART_METER/
-├── src/                    # Logic Implementation Modules
-│   ├── __init__.py         # Package initializer
-│   ├── processor.py        # Data cleaning logic
-│   ├── analytics.py        # Baseload & pattern math
-│   ├── ml_logic.py         # AI/Anomaly detection
-│   └── recommender.py      # Gemini API & Advice logic
-├── Smart_AI_Meter/         # Main Dashboard Files
-│   ├── app.py              # Main Entry point
-│   ├── .streamlit/         # Config & Secrets
-│   └── assets/             # UI Styling (CSS)
-├── data/                   # Persistent CSV Storage
-│   ├── raw_usage.csv       # Messy input data
-│   └── processed_data.csv  # Computable output
-└── helper/                 # Developer Documentation
-    ├── data_cleaning.txt
-    ├── ai_model_notes.txt
-    └── api_integration.txt
-```
+├── Smart_AI_Meter/
+    ├── src/                    # Logic Implementation Modules
+    │   ├── __init__.py         # Package initializer
+    │   ├── processor.py        # Data cleaning logic
+    │   ├── predictor.py        # Training Model
+    │   ├── forecaster.py       # Predictions
+    │   ├── weather_service.py  # Fetching weather 
+    │   └── recommender.py      # Hugging Face API
+    ├── app.py                  # Main Entry point
+    ├── .streamlit/             # Config & Secrets
+    ├── data/                   # Persistent CSV Storage
+        ├── prediction.csv      # Predicted data
+        ├── Raw.csv             # Raw data
+        └── processed.csv       # Processed output
+    └── analysis/               # Developer Documentation
+        └── visualization.py
+ ```
 ## Modular Development Rules
 1) Each module (e.g., processor.py) has its own independent logic.
 Functions must include Docstrings explaining inputs and outputs.

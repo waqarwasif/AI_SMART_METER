@@ -4,7 +4,7 @@ import os
 import time
 from fpdf import FPDF
 
-# --- IMPORT YOUR MODULES ---
+# --- IMPORTING MODULES ---
 from src.processor import clean_data
 from src.predictor import train_model
 from src.forecaster import predict_next_week
@@ -17,7 +17,7 @@ except ImportError:
     st.error("⚠️ Could not import 'visualization'. Please ensure 'visualization.py' is in the 'analysis' folder.")
 
 # ---------------------------------------------
-# 0. PDF Generator Function (FIXED FOR UNICODE)
+# 0. PDF Generator Function 
 # ---------------------------------------------
 def create_pdf(report_text):
     class PDF(FPDF):
@@ -31,7 +31,7 @@ def create_pdf(report_text):
             self.set_font('Arial', 'I', 8)
             self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
 
-    # 1. Sanitize Text (Remove Emojis & Fix Bullets)
+    # 1. Sanitize Text 
     # FPDF only supports Latin-1, so we replace fancy chars with simple ones
     replacements = {
         '\u2022': '-',      # Bullet point -> Dash
@@ -59,7 +59,7 @@ def create_pdf(report_text):
     pdf.set_font("Arial", size=12)
     
     # Add content
-    # We strip markdown stars/hashes for cleaner plain text in PDF
+    # strip markdown stars/hashes for cleaner plain text in PDF
     clean_text = safe_text.replace('**', '').replace('###', '').replace('####', '')
     
     pdf.multi_cell(0, 7, clean_text)

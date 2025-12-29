@@ -4,13 +4,12 @@ import os
 from src.weather_service import get_karachi_weather_forecast
 
 def generate_future_features(model_features):
-    # 1. Call the API
+    # 1. Calling the API
     weather_df = get_karachi_weather_forecast()
     
-    # 2. STRICT CHECK: Did we get real data?
+    # 2.CHECK: Did we get real data?
     if weather_df is None:
         print("\n" + "!"*50)
-        print("🚨 CRITICAL WARNING: USING FAKE SIMULATED WEATHER 🚨")
         print("   Check your Internet Connection!")
         print("!"*50 + "\n")
         
@@ -63,8 +62,5 @@ def predict_next_week(model, feature_cols):
     # 3. Predict
     future_df['predicted_usage_kwh'] = model.predict(X_future)
     
-    # --- DELETED SAVING LOGIC HERE ---
-    # The file saving is now handled exclusively by app.py 
-    # to prevent duplicate files and ensure correct column filtering.
     
     return future_df

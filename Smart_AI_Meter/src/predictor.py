@@ -34,7 +34,7 @@ def train_model(df):
     print(f"   👉 Training on {len(available_features)} Features: {available_features}")
 
     # 2. The Validation Phase (The "Mock Exam")
-    # We split the data: 80% Past (Train) vs 20% Future (Test)
+    # split the data: 80% Past (Train) vs 20% Future (Test)
     split_point = int(len(df) * 0.8)
     
     train_df = df.iloc[:split_point]

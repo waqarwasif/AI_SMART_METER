@@ -12,14 +12,14 @@ An intelligent energy monitoring system designed to help Pakistani households re
 
 ## Tech Stack
 - **Frontend:** Streamlit
-- **AI/ML:** Scikit-Learn, Google Gemini API
+- **AI/ML:** Scikit-Learn, Hugging Face API
 - **Data:** Pandas, Numpy
-- **Visuals:** Plotly, Seaborn
+- **Visuals:** matplotlib, Plotly, Seaborn
 
 ## Project Structure
 - `src/`: Core logic (Processing, AI, Recommender)
 - `data/`: Sample CSV files
-- `assets/`: UI styling and images
+- `analysis/`: Visualization 
 - `app.py`: Main dashboard entry point
 
 ## Installation

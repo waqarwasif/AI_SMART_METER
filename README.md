@@ -7,7 +7,7 @@ An intelligent energy monitoring system designed to help Pakistani households re
 - **Data Ingestion:** Automatically cleans and standardizes messy smart meter CSV data.
 - **Vampire Load Detection:** Identifies "always-on" appliances wasting energy.
 - **AI Anomaly Detection:** Uses Scikit-Learn (Isolation Forest) to find unusual usage spikes.
-- **Smart Advisor:** Generates a personalized 7-Day saving plan via Gemini API.
+- **Smart Advisor:** Generates a personalized 7-Day saving plan via Hugging Face API.
 - **Slab Alert:** Real-time monitoring to prevent jumping into higher electricity tax brackets.
 
 ## Tech Stack

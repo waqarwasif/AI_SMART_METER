@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np  # Needed for simulation
 import os
 import time
 from fpdf import FPDF
@@ -178,46 +179,63 @@ with col_status2:
 st.markdown("---")
 
 # ---------------------------------------------
-# 4. LIVE IOT MONITOR (Simulation)
+# 4. LIVE IOT MONITOR (Cloud Compatible Version)
 # ---------------------------------------------
 st.subheader("📡 Live IoT Monitor")
 st.caption(
     "Real-time stream from Smart Meter (DEMO MODE: Simulating Hardware Connection)"
 )
 
+# Initialize session state for live data if not exists
+if "live_data" not in st.session_state:
+    # Create empty dataframe with structure
+    st.session_state.live_data = pd.DataFrame(
+        columns=["timestamp", "voltage", "current", "power_kw"]
+    )
+
 if st.toggle("🔌 Activate IoT Simulation Mode"):
     placeholder = st.empty()
-    live_path = "data/live_stream.csv"
 
-    if not os.path.exists(live_path):
-        st.warning(
-            "⚠️ Waiting for sensor stream... Please run 'python simulate_sensor.py' in your terminal."
+    # Run the loop for 50 iterations (approx 25 seconds) to prevent cloud timeout
+    # User can toggle off/on to restart
+    for _ in range(50):
+
+        
+        now = pd.Timestamp.now()
+        voltage = np.random.normal(220, 2)
+        current = np.random.normal(8, 3)
+        
+        if np.random.random() > 0.8:
+            current += 10
+        power = (voltage * current) / 1000
+
+        new_row = pd.DataFrame(
+            [[now, voltage, current, power]],
+            columns=["timestamp", "voltage", "current", "power_kw"],
         )
-    else:
-        # Loop to simulate live refresh (stops after 50 updates to prevent freeze)
-        for _ in range(50):
-            try:
-                live_df = pd.read_csv(live_path).tail(50)  # Read last 50 rows
 
-                with placeholder.container():
-                    last_power = live_df["power_kw"].iloc[-1]
-                    last_volts = live_df["voltage"].iloc[-1]
+        st.session_state.live_data = pd.concat(
+            [st.session_state.live_data, new_row], ignore_index=True
+        )
 
-                    k1, k2, k3 = st.columns(3)
-                    k1.metric(
-                        "Live Load", f"{last_power:.2f} kW", delta_color="inverse"
-                    )
-                    k2.metric("Voltage", f"{last_volts:.1f} V")
-                    k3.metric("Grid Status", "ONLINE ⚡")
+        if len(st.session_state.live_data) > 50:
+            st.session_state.live_data = st.session_state.live_data.tail(50)
 
-                    st.area_chart(live_df["power_kw"], color="#00f5d4", height=200)
-                    st.caption(
-                        "Displaying real-time power fluctuation from local sensor stream."
-                    )
+        with placeholder.container():
+            df_display = st.session_state.live_data
 
-                time.sleep(2)
-            except Exception:
-                break
+            last_power = df_display["power_kw"].iloc[-1]
+            last_volts = df_display["voltage"].iloc[-1]
+
+            k1, k2, k3 = st.columns(3)
+            k1.metric("Live Load", f"{last_power:.2f} kW", delta_color="inverse")
+            k2.metric("Voltage", f"{last_volts:.1f} V")
+            k3.metric("Grid Status", "ONLINE ⚡")
+
+            st.area_chart(df_display["power_kw"], color="#00f5d4", height=200)
+            st.caption("Displaying real-time power fluctuation (Generated In-App).")
+
+        time.sleep(0.5)  
 
 st.markdown("---")
 

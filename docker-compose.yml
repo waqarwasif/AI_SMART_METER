@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  energy-app:
+    build: .
+    container_name: energy-advisor
+    ports:
+      - "8501:8501"
+    # volumes:          <-- DELETE OR COMMENT OUT
+    #   - .:/app        <-- DELETE OR COMMENT OUT
+    restart: unless-stopped

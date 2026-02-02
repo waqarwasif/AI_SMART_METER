@@ -9,35 +9,43 @@ def clean_data(input_df):
     
     df = input_df.copy()
 
-    # 1. Standardization: Normalize column names to prevent KeyError
+    # 1. Standardization: Normalize column names
     df.columns = [c.strip().lower() for c in df.columns]
     
     rename_map = {
         'usage': 'usage_kwh', 'kwh': 'usage_kwh',
-        'temp': 'temperature_c', 'temperature': 'temperature_c', 'temp_c': 'temperature_c'
+        'temp': 'temperature_c', 'temperature': 'temperature_c', 'temp_c': 'temperature_c',
+        'datetime': 'timestamp', 'time': 'timestamp'
     }
     df = df.rename(columns=rename_map)
 
-    # 2. THE CIRCUIT BREAKER (Physics Logic)
-    # Critical Safety Net: Catch physically impossible values (sensor glitches) before processing.
-    # 20 kWh/hr is the hard limit for a residential main breaker.
-    HARD_LIMIT = 20.0 
-    
-    if 'usage_kwh' in df.columns:
-        impossible_count = (df['usage_kwh'] > HARD_LIMIT).sum()
-        if impossible_count > 0:
-            print(f"🔥 Found {impossible_count} impossible values (> {HARD_LIMIT} kWh). Clipping to reality.")
-            df['usage_kwh'] = df['usage_kwh'].clip(upper=HARD_LIMIT)
+    # --- CRITICAL FIX: TIME EXTRACTION ---
+    # We must convert timestamp to datetime objects to extract hour/day/month
+    if 'timestamp' in df.columns:
+        df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
+        # Drop rows where timestamp failed to parse
+        df = df.dropna(subset=['timestamp'])
+        
+        # Extract components
+        df['hour'] = df['timestamp'].dt.hour
+        df['day_of_week'] = df['timestamp'].dt.dayofweek
+        df['day_of_month'] = df['timestamp'].dt.day
+        df['month'] = df['timestamp'].dt.month
+        
+        # Sort by time to ensure linear interpolation works correctly
+        df = df.sort_values('timestamp').reset_index(drop=True)
 
-    # 3. Domain Integrity Checks (Sanity Checks)
-    # Enforce realistic bounds for time and physics
+    # 2. THE CIRCUIT BREAKER (Physics Logic)
+    HARD_LIMIT = 20.0 
+    if 'usage_kwh' in df.columns:
+        df['usage_kwh'] = df['usage_kwh'].clip(upper=HARD_LIMIT)
+
+    # 3. Domain Integrity Checks
     if 'hour' in df.columns: df['hour'] = df['hour'].clip(0, 23)
-    if 'day_of_week' in df.columns: df['day_of_week'] = df['day_of_week'].clip(0, 6)
     if 'temperature_c' in df.columns: df['temperature_c'] = df['temperature_c'].clip(5, 50) 
     if 'usage_kwh' in df.columns: df['usage_kwh'] = df['usage_kwh'].clip(lower=0)
 
-    # 4. Logical Consistency (Data Integrity)
-    # Auto-correct derivative features to ensure they match the primary data
+    # 4. Logical Consistency
     if 'day_of_week' in df.columns:
         df['is_weekend'] = df['day_of_week'].apply(lambda x: 1 if x >= 5 else 0)
 
@@ -45,23 +53,16 @@ def clean_data(input_df):
         df['week_of_month'] = df['day_of_month'].apply(lambda d: (d - 1) // 7 + 1)
 
     # 5. Missing Value Imputation
-    # Use Linear Interpolation to preserve Time-Series continuity (better than filling with 0)
     df = df.interpolate(method='linear', limit_direction='both')
     df = df.fillna(0)
 
     # 6. Statistical Cleaning (Winsorization)
-    # Cap extreme legitimate outliers at the 99th percentile to stabilize model training
     if 'usage_kwh' in df.columns:
         upper_limit = df['usage_kwh'].quantile(0.99)
         if len(df) > 0:
-            outliers = (df['usage_kwh'] > upper_limit).sum()
-            if outliers > 0:
-                print(f"⚠️  Winsorized {outliers} statistical outliers > {upper_limit:.2f} kWh")
             df['usage_kwh'] = df['usage_kwh'].clip(upper=upper_limit)
 
     # 7. Advanced Feature Engineering (Cyclical Encoding)
-    # Transform linear time (0-23) into circular coordinates (sin/cos)
-    # This helps the AI understand that 23:00 is adjacent to 00:00
     if 'hour' in df.columns:
         df['hour_sin'] = np.sin(2 * np.pi * df['hour'] / 24)
         df['hour_cos'] = np.cos(2 * np.pi * df['hour'] / 24)
@@ -76,4 +77,3 @@ def clean_data(input_df):
 
     print("✅ Data Cleaning Pipeline Complete.")
     return df
-

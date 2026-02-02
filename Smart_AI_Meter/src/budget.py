@@ -43,6 +43,9 @@ def calculate_budget_plan(
             budget_units += money / 18
         target_units = int(budget_units)
         mode = "Strict Budget"
+            budget_units += money / 18
+        target_units = int(budget_units)
+        mode = "Strict Budget"
     else:
         # Default Logic if no budget given
         if predicted_kwh > 0:

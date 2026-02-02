@@ -41,9 +41,7 @@ def calculate_budget_plan(
                 budget_units += money / 30
         else:
             budget_units += money / 18
-        target_units = int(budget_units)
-        mode = "Strict Budget"
-            budget_units += money / 18
+
         target_units = int(budget_units)
         mode = "Strict Budget"
     else:

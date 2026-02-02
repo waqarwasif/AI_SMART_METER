@@ -380,7 +380,11 @@ with tab1:
                 hf_api_key = ""
 
             if not hf_api_key:
-                hf_api_key = st.text_input("🔑 Enter Hugging Face API Key (Required for PDF Report)", type="password", key="pdf_key_input")
+                hf_api_key = st.text_input(
+                    "🔑 Enter Hugging Face API Key (Required for PDF Report)",
+                    type="password",
+                    key="pdf_key_input",
+                )
 
             if hf_api_key:
                 with st.spinner("Writing Official Report..."):
@@ -407,37 +411,58 @@ with tab1:
                 )
 
 # =========================================
-# TAB 2: REVERSE BUDGET PLANNER (Legacy View)
+# TAB 2: REVERSE BUDGET PLANNER (Fixed)
 # =========================================
 with tab2:
     st.subheader("📉 Reverse Budget Calculator")
-    st.info("Quick calculator: Input budget -> Get max daily units.")
-    b_col1, b_col2 = st.columns(2)
-    with b_col1:
-        target_budget_legacy = st.number_input("My Budget (Rs.)", value=10000, step=500)
-    with b_col2:
-        days_left = st.slider("Days remaining", 1, 30, 15)
+    st.info("Input your money budget to see your daily energy limit.")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        target_budget_legacy = st.number_input(
+            "💰 Monthly Budget (Rs.)", value=5000, step=500
+        )
+    with c2:
+        days_left = st.slider("🗓️ Days Remaining", 1, 30, 20)
+
+    # Optional: Input current usage if known (defaults to 0 for a clean start)
+    current_used = st.number_input(
+        "⚡ Units Used So Far (Optional)",
+        value=0,
+        step=10,
+        help="Check your meter reading if possible.",
+    )
 
     if st.button("Calculate Daily Limit"):
-        # Use the NEW robust Agent logic here too
-        user_devices = st.session_state.get("household_profile", {}).get("devices", [])
+
+        # Get devices from profile (or default list)
+        user_devices = st.session_state.get("household_profile", {}).get(
+            "devices", ["AC", "Iron", "Fans"]
+        )
+
+        # Call Budget Agent in "Calculator Mode" (predicted_kwh=0)
         plan = calculate_budget_plan(
             target_bill_rs=target_budget_legacy,
-            current_usage_kwh=150,  # Example placeholder
+            current_usage_kwh=current_used,
             days_left=days_left,
             user_selected_devices=user_devices,
+            predicted_kwh=0,  # Explicitly 0 triggers Calculator Mode
         )
-        st.metric("Safe Daily Limit", f"{plan.get('daily_limit', 0)} kWh")
-        if plan["status"] == "SAFE":
-            st.success(plan["message"])
-        else:
+
+        # Display Results
+        col_res1, col_res2 = st.columns(2)
+        col_res1.metric("Allowed Total Units", f"{plan['target_units']} kWh")
+        col_res2.metric("Safe Daily Limit", f"{plan['daily_limit']} kWh/day")
+
+        if plan["status"] == "CRITICAL":
             st.error(plan["message"])
-            for action in plan.get("action_plan", []):  # Handle both formats if needed
-                st.write(action)
+        else:
+            st.success(plan["message"])
 
         st.caption("Based on your budget, here is what you can run daily:")
         for action in plan.get("actions", []):
             st.write(action)
+
 # =========================================
 # TAB 3: SOLAR ROI
 # =========================================

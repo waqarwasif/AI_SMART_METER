@@ -21,13 +21,17 @@ PEAK_END = 19
 
 
 def save_plot(name):
+    """
+    Saves the current matplotlib figure to the graphs directory
+    and closes it to free memory.
+    """
     plt.tight_layout()
     plt.savefig(f"graphs/{name}", dpi=DPI, bbox_inches="tight")
     plt.close()
 
 
 # ---------------------------------------------
-# HISTORICAL DATA
+# HISTORICAL DATA PLOTS
 # ---------------------------------------------
 def plot_clean_daily_profile(df):
     avg = df.groupby("hour")["usage_kwh"].mean()
@@ -54,7 +58,7 @@ def plot_clean_peak_distribution(df):
         autopct="%1.1f%%",
         startangle=90,
         colors=["#ff7f0e", "#1f77b4"],
-        wedgeprops=dict(width=0.35)
+        wedgeprops=dict(width=0.35),
     )
     plt.title("Energy Usage Distribution")
     save_plot("2_clean_peak_distribution.png")
@@ -89,12 +93,10 @@ def plot_clean_temp_correlation(df):
 
 
 def plot_clean_heatmap(df):
+    # Pivot table: Day of Month x Hour
     pivot = (
         df.pivot_table(
-            index="day_of_month",
-            columns="hour",
-            values="usage_kwh",
-            aggfunc="mean"
+            index="day_of_month", columns="hour", values="usage_kwh", aggfunc="mean"
         )
         .sort_index()
         .fillna(0)
@@ -106,7 +108,7 @@ def plot_clean_heatmap(df):
         cmap="magma",
         vmin=pivot.min().min(),
         vmax=pivot.max().max(),
-        cbar_kws={"label": "kWh"}
+        cbar_kws={"label": "kWh"},
     )
     plt.title("Usage Intensity Heatmap")
     plt.xlabel("Hour")
@@ -115,7 +117,7 @@ def plot_clean_heatmap(df):
 
 
 # ---------------------------------------------
-# PREDICTED DATA
+# PREDICTED DATA PLOTS
 # ---------------------------------------------
 def plot_pred_daily_profile(df):
     avg = df.groupby("hour")["predicted_usage_kwh"].mean()
@@ -142,7 +144,7 @@ def plot_pred_peak_distribution(df):
         autopct="%1.1f%%",
         startangle=90,
         colors=["#ffbb78", "#ff7f0e"],
-        wedgeprops=dict(width=0.35)
+        wedgeprops=dict(width=0.35),
     )
     plt.title("Predicted Energy Distribution")
     save_plot("7_pred_peak_distribution.png")
@@ -160,23 +162,12 @@ def plot_pred_full_forecast(df):
 def plot_pred_temp_forecast(df):
     fig, ax1 = plt.subplots(figsize=FIG_WIDE)
 
-    ax1.plot(
-        range(len(df)),
-        df["predicted_usage_kwh"],
-        color="#ff7f0e",
-        linewidth=2
-    )
+    ax1.plot(range(len(df)), df["predicted_usage_kwh"], color="#ff7f0e", linewidth=2)
     ax1.set_ylabel("Predicted Usage (kWh)", color="#ff7f0e")
     ax1.tick_params(axis="y", labelcolor="#ff7f0e")
 
     ax2 = ax1.twinx()
-    ax2.plot(
-        range(len(df)),
-        df["temperature_c"],
-        "--",
-        color="#d62728",
-        linewidth=2
-    )
+    ax2.plot(range(len(df)), df["temperature_c"], "--", color="#d62728", linewidth=2)
     ax2.set_ylabel("Forecast Temperature (°C)", color="#d62728")
     ax2.tick_params(axis="y", labelcolor="#d62728")
 
@@ -188,25 +179,23 @@ def plot_pred_temp_forecast(df):
 def plot_pred_heatmap(df):
     df = df.copy()
 
-    # --- STRICT DATETIME HANDLING ---
+    # Ensure timestamp is datetime type for calculation
     df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+    # Calculate a "Forecast Day" (Day 1, Day 2, etc.)
     df["forecast_day"] = (
-        df["timestamp"].dt.date
-        - df["timestamp"].dt.date.min()
+        df["timestamp"].dt.date - df["timestamp"].dt.date.min()
     ).apply(lambda x: x.days + 1)
 
-    # --- PIVOT TABLE ---
-    pivot = (
-        df.pivot_table(
-            index="forecast_day",
-            columns="hour",
-            values="predicted_usage_kwh",
-            aggfunc="mean"
-        )
-        .sort_index()
-    )
+    # Pivot table: Forecast Day x Hour
+    pivot = df.pivot_table(
+        index="forecast_day",
+        columns="hour",
+        values="predicted_usage_kwh",
+        aggfunc="mean",
+    ).sort_index()
 
-    # --- ROBUST COLOR SCALING ---
+    # Scale colors robustly (ignoring extreme outliers for better visual contrast)
     vmin = pivot.stack().quantile(0.05)
     vmax = pivot.stack().quantile(0.95)
 
@@ -217,7 +206,7 @@ def plot_pred_heatmap(df):
         vmin=vmin,
         vmax=vmax,
         linewidths=0.2,
-        cbar_kws={"label": "Predicted Usage (kWh)"}
+        cbar_kws={"label": "Predicted Usage (kWh)"},
     )
 
     plt.title("Predicted Usage Heatmap (7-Day Forecast)")

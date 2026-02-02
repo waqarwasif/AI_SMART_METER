@@ -10,4 +10,7 @@ pyyaml
 python-dateutil
 google-generativeai
 huggingface-hub
+openmeteo-requests
 fpdf
+requests-cache
+retry-requests

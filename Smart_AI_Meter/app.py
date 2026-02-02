@@ -149,23 +149,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ---------------------------------------------
-# 3. Global Status Widget
-# ---------------------------------------------
-if "savings_streak" not in st.session_state:
-    st.session_state.savings_streak = 5
-
-usage_status = "SAFE"
-col_status1, col_status2 = st.columns([3, 1])
-with col_status1:
-    if usage_status == "SAFE":
-        st.success("🟢 DAILY STATUS: GREEN (You are under your daily budget)")
-    else:
-        st.error("🔴 DAILY STATUS: RED (High usage detected!)")
-with col_status2:
-    st.metric("🔥 Savings Streak", f"{st.session_state.savings_streak} Days")
-
-st.markdown("---")
 
 # ---------------------------------------------
 # 4. Live IoT Monitor

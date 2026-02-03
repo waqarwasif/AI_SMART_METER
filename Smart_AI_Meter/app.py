@@ -283,10 +283,16 @@ with tab1:
                 full_future_df = predict_next_week(model, feature_list)
                 st.session_state["future_df"] = full_future_df
 
-                # Visualization Generation
+                # --- VISUALIZATION GENERATION (This was missing) ---
+                # We generate all plots now so they are saved to /graphs
                 viz.plot_clean_daily_profile(df_clean)
+                viz.plot_clean_peak_distribution(df_clean)
+                viz.plot_clean_heatmap(df_clean)
+
                 viz.plot_pred_daily_profile(full_future_df)
-                # (Add other viz calls here as needed)
+                viz.plot_pred_peak_distribution(full_future_df)
+                viz.plot_pred_heatmap(full_future_df)
+                viz.plot_pred_full_forecast(full_future_df)
 
                 st.session_state["analysis_done"] = True
                 st.rerun()  # Refresh to show results
@@ -306,9 +312,32 @@ with tab1:
         m2.metric("Projected Bill (Approx)", f"Rs. {est_bill:,.0f}")
         m3.metric("Avg Daily Usage", f"{total_kwh/7:.2f} kWh")
 
-        st.line_chart(
-            future_df[["timestamp", "predicted_usage_kwh"]].set_index("timestamp")
-        )
+        # --- VISUALIZATION DISPLAY (This was missing) ---
+        st.markdown("#### 📉 Visual Insights")
+
+        # Row 1: Daily Profiles
+        v1, v2 = st.columns(2)
+        with v1:
+            st.image(
+                "graphs/1_clean_daily_profile.png", caption="Historical Daily Pattern"
+            )
+        with v2:
+            st.image(
+                "graphs/6_pred_daily_profile.png", caption="Predicted Future Pattern"
+            )
+
+        # Row 2: Heatmaps & Distribution
+        v3, v4 = st.columns(2)
+        with v3:
+            st.image("graphs/5_clean_heatmap.png", caption="Historical Usage Intensity")
+        with v4:
+            st.image(
+                "graphs/7_pred_peak_distribution.png",
+                caption="Predicted Peak vs Off-Peak",
+            )
+
+        # Row 3: Full Forecast
+        st.image("graphs/8_pred_full_forecast.png", caption="7-Day Load Forecast Model")
 
         # 2. THE PRESCRIPTION (Optimization Studio)
         st.markdown("---")
@@ -392,7 +421,6 @@ with tab1:
                     create_pdf(st.session_state["ai_plan"]),
                     "Report.pdf",
                 )
-
 # =========================================
 # TAB 2: REVERSE BUDGET PLANNER (Fixed)
 # =========================================

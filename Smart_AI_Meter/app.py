@@ -564,13 +564,21 @@ with tab4:
                 - REQUIRED ACTIONS: {', '.join(plan.get('actions', []))}
                 """
 
-            # 5. Build Memory Chain (Sliding Window)
+            # 5. Build Memory Chain for AI
             history_for_ai = [
                 {
                     "role": "system",
-                    "content": f"You are a helpful energy expert. Use this live system data to answer: {agent_context}. Answer short and concise.",
+                    "content": (
+                        f"You are a helpful energy expert. Use this live system data: {agent_context}. "
+                        "STRICT MATH RULES: "
+                        "1. NEVER subtract 'Units (kWh)' from 'Money (Rs)'. "
+                        "2. Always convert device usage to cost before subtracting from a budget. "
+                        "3. Assume 1 Unit (kWh) = Rs. 40 roughly. "
+                        "4. Keep answers short, concise, and unit-accurate."
+                    ),
                 }
             ]
+            
             # Take last 10 messages for memory efficiency
             history_for_ai.extend(st.session_state.messages[-10:])
 
